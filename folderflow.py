@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 
 # ---------------------------
 # TOP-LEVEL CATEGORIES & FILE TYPES
@@ -151,6 +152,7 @@ def organize(path="."):
 # ---------------------------
 
 if __name__ == "__main__":
-    print("Running FolderFlow...")
-    organize()
+    folder = sys.argv[1] if len(sys.argv) > 1 else "."
+    print(f"Running FolderFlow on {folder}...")
+    organize(folder)
     print("✔ Done! Folder organized successfully.")
