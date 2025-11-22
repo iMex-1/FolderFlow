@@ -2,7 +2,7 @@ import os
 import shutil
 
 # ---------------------------
-# CATEGORIES & FILE TYPES
+# TOP-LEVEL CATEGORIES & FILE TYPES
 # ---------------------------
 
 CATEGORIES = {
@@ -15,16 +15,6 @@ CATEGORIES = {
     "Audio": [
         ".mp3", ".wav", ".ogg", ".flac", ".m4a", ".aac", ".wma"
     ],
-    "Archives": [
-        ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz"
-    ],
-    "Code": [
-        ".py", ".js", ".ts", ".jsx", ".tsx", ".html", ".css",
-        ".php", ".java", ".cpp", ".c", ".cs", ".json", ".xml", ".sh", ".bat", ".pl", ".rb", ".go", ".rs", ".swift", ".kt"
-    ],
-    "Design": [
-        ".psd", ".ai", ".xd", ".fig", ".sketch", ".indd", ".svg"
-    ],
     "Apps": [
         ".exe", ".msi", ".bat", ".cmd", ".apk", ".lnk", ".url"
     ],
@@ -33,13 +23,13 @@ CATEGORIES = {
     ],
     "Fonts": [
         ".ttf", ".otf", ".woff", ".woff2", ".fnt", ".fon"
-    ],
-    "DevResources": [
-        ".env", ".yml", ".yaml", ".ini", ".cfg", ".dockerfile", ".gitignore", ".docker-compose"
     ]
 }
 
-# Nested document categories
+# ---------------------------
+# NESTED CATEGORIES
+# ---------------------------
+
 DOCUMENT_SUBCATEGORIES = {
     "PDF": [".pdf", ".xps"],
     "Word": [".doc", ".docx", ".odt"],
@@ -48,18 +38,63 @@ DOCUMENT_SUBCATEGORIES = {
     "Text": [".txt", ".rtf"]
 }
 
+ARCHIVE_SUBCATEGORIES = {
+    "ZIP": [".zip"],
+    "RAR": [".rar"],
+    "7Z": [".7z"],
+    "TAR": [".tar", ".gz", ".bz2", ".xz"]
+}
+
+CODE_SUBCATEGORIES = {
+    "Python": [".py"],
+    "JavaScript": [".js", ".ts", ".jsx", ".tsx"],
+    "HTML_CSS": [".html", ".css"],
+    "Java": [".java"],
+    "C_CPP": [".c", ".cpp"],
+    "CSharp": [".cs"],
+    "Other": [".json", ".xml", ".sh", ".bat", ".pl", ".rb", ".go", ".rs", ".swift", ".kt"]
+}
+
+DESIGN_SUBCATEGORIES = {
+    "Photoshop": [".psd"],
+    "Illustrator": [".ai"],
+    "XD": [".xd"],
+    "Figma": [".fig"],
+    "Sketch": [".sketch"],
+    "InDesign": [".indd"],
+    "SVG": [".svg"]
+}
+
+DEVRESOURCES_SUBCATEGORIES = {
+    "Env": [".env"],
+    "YAML": [".yml", ".yaml"],
+    "Config": [".ini", ".cfg"],
+    "Docker": [".dockerfile", "docker-compose"],
+    "Git": [".gitignore"]
+}
+
 IGNORE_FOLDERS = {
-    "__pycache__",
-    "node_modules",
-    "venv",
-    ".git",
-    ".idea",
-    ".vscode"
+    "__pycache__", "node_modules", "venv", ".git", ".idea", ".vscode",
+    "Documents", "Archives", "Code", "Design", "DevResources", "Others"
 }
 
 # ---------------------------
 # ORGANIZE FUNCTION
 # ---------------------------
+
+def move_files(file_path, base_folder, subcategories):
+    _, ext = os.path.splitext(file_path)
+    ext = ext.lower()
+    file_name = os.path.basename(file_path)
+
+    for folder, extensions in subcategories.items():
+        if ext in extensions:
+            target_folder = os.path.join(base_folder, folder)
+            os.makedirs(target_folder, exist_ok=True)
+            shutil.move(file_path, target_folder)
+            print(f"Moved {file_name} → {base_folder}/{folder}/")
+            return True
+    return False
 
 def organize(path="."):
     for item in os.listdir(path):
@@ -67,41 +102,38 @@ def organize(path="."):
 
         # Skip directories we shouldn't touch
         if os.path.isdir(item_path):
-            if item in IGNORE_FOLDERS:
-                continue
-            if item in CATEGORIES.keys() or item == "Documents" or item == "Others":
+            if item in IGNORE_FOLDERS or item in CATEGORIES.keys():
                 continue
             continue  # do not move directories, only files
 
-        # Get extension
-        _, ext = os.path.splitext(item)
-        ext = ext.lower()
-
+        # -------------------
+        # Nested categories first
+        # -------------------
         moved = False
-
-        # -------------------
-        # Nested document folders
-        # -------------------
-        for folder_name, extensions in DOCUMENT_SUBCATEGORIES.items():
-            if ext in extensions:
-                target_folder = os.path.join(path, "Documents", folder_name)
-                os.makedirs(target_folder, exist_ok=True)
-                shutil.move(item_path, target_folder)
-                print(f"Moved {item}  →  Documents/{folder_name}/")
-                moved = True
+        for base_folder, subcategories in [
+            ("Documents", DOCUMENT_SUBCATEGORIES),
+            ("Archives", ARCHIVE_SUBCATEGORIES),
+            ("Code", CODE_SUBCATEGORIES),
+            ("Design", DESIGN_SUBCATEGORIES),
+            ("DevResources", DEVRESOURCES_SUBCATEGORIES)
+        ]:
+            moved = move_files(item_path, base_folder, subcategories)
+            if moved:
                 break
         if moved:
             continue
 
         # -------------------
-        # Other categories
+        # Top-level categories
         # -------------------
         for folder, extensions in CATEGORIES.items():
+            _, ext = os.path.splitext(item)
+            ext = ext.lower()
             if ext in extensions:
-                folder_path = os.path.join(path, folder)
-                os.makedirs(folder_path, exist_ok=True)
-                shutil.move(item_path, folder_path)
-                print(f"Moved {item}  →  {folder}/")
+                target_folder = os.path.join(path, folder)
+                os.makedirs(target_folder, exist_ok=True)
+                shutil.move(item_path, target_folder)
+                print(f"Moved {item} → {folder}/")
                 moved = True
                 break
 
@@ -112,7 +144,7 @@ def organize(path="."):
             other_folder = os.path.join(path, "Others")
             os.makedirs(other_folder, exist_ok=True)
             shutil.move(item_path, other_folder)
-            print(f"Moved {item}  →  Others/")
+            print(f"Moved {item} → Others/")
 
 # ---------------------------
 # ENTRY POINT
