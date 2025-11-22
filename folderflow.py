@@ -28,7 +28,6 @@ UNDO_FILE = "folderflow_undo.json"
 LOG_FILE = "folderflow.log"
 
 MAX_FILE_SIZE_MB = 300  # Skip files bigger than this
-MAX_FOLDER_SIZE_MB = 1500  # Skip entire folders bigger than this
 
 
 # ===========================
@@ -39,41 +38,6 @@ def log(message):
     with open(LOG_FILE, "a") as logf:
         logf.write(f"{datetime.now()} - {message}\n")
     print(message)
-
-
-def folder_size(path):
-    total = 0
-    for root, _, files in os.walk(path):
-        for f in files:
-            fp = os.path.join(root, f)
-            try:
-                total += os.path.getsize(fp)
-            except:
-                pass
-    return total / (1024 * 1024)  # convert to MB
-
-
-def scan_files_recursively(base_path):
-    files_list = []
-
-    for root, dirs, files in os.walk(base_path):
-        # Skip ignored dirs
-        dirs[:] = [d for d in dirs if d not in IGNORE_FOLDERS]
-
-        # Exclude large directories
-        for d in list(dirs):
-            folder_path = os.path.join(root, d)
-            size_mb = folder_size(folder_path)
-            if size_mb > MAX_FOLDER_SIZE_MB:
-                log(f"Skipping large folder: {d} ({size_mb:.1f} MB)")
-                dirs.remove(d)
-
-        # Add files
-        for f in files:
-            full_path = os.path.join(root, f)
-            files_list.append(full_path)
-
-    return files_list
 
 
 def show_progress(current, total):
@@ -88,17 +52,14 @@ def show_progress(current, total):
 
 def organize(base_path="."):
     moved_files = {}
-
-    all_files = scan_files_recursively(base_path)
-    total = len(all_files)
+    all_items = [os.path.join(base_path, f) for f in os.listdir(base_path)]
+    files = [f for f in all_items if os.path.isfile(f)]
+    total = len(files)
     current = 0
 
-    for file_path in all_files:
+    for file_path in files:
         current += 1
         show_progress(current, total)
-
-        if os.path.isdir(file_path):
-            continue
 
         size_mb = os.path.getsize(file_path) / (1024 * 1024)
         if size_mb > MAX_FILE_SIZE_MB:
@@ -107,7 +68,6 @@ def organize(base_path="."):
 
         ext = os.path.splitext(file_path)[1].lower()
         file_name = os.path.basename(file_path)
-        file_dir = os.path.dirname(file_path)
 
         moved = False
 
@@ -177,7 +137,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python folderflow.py run   → organize files")
+        print("  python folderflow.py run   → organize files in current folder")
         print("  python folderflow.py undo  → undo last run")
         exit()
 
